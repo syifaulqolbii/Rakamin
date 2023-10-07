@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>List of Category</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+<h1>Welcome to my IMDb Wanna Be</h1>
+<a href="/films">Show All Films</a><br>
+<a href="/categories">Show All Category</a><br>
+
+<h2>List of Category</h2>
+<table>
+    <tr>
+        <th>No</th>
+        <th>Name</th>
+        <th>Film By Category</th>
+    </tr>
+    <% categories.forEach(function(categories) { %>
+        <tr>
+            <td><%= categories.id %></td>
+            <td><%= categories.name %></td>
+            <td>
+                <a href="/categories/<%= categories.id %>">Show Films</a>
+            </td>
+        </tr>
+    <% }); %>
+</table>
+</body>
+</html>
