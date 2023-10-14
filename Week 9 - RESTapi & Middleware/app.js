@@ -17,6 +17,6 @@ app.use('/api/v1', router);
 app.use(errorHandler);
 
 app.listen(port, () => {
-    console.log(`Listening at http://localhost:${port}`);
+    console.log(`Listening at http://localhost:${port}/api/v1`);
 });
 

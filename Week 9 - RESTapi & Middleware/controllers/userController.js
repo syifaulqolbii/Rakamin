@@ -2,11 +2,37 @@ const {users} = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
+const {
+    SECRET_KEY
+} = process.env;
+
 module.exports = {
     getAllUsers: async (req, res) => {
+        // adding pagination & limit to get all users
         try {
-            const allUser = await users.findAll();
-            res.status(200).json(allUser);
+            const {page, limit, condition, sort} = req.query;
+
+            const pageNumber = parseInt(page) || 1;
+            const itemsPerPage = parseInt(limit) || 10;
+
+            const offset = (pageNumber - 1) * itemsPerPage;
+
+            const usersData = await users.findAndCountAll({
+                attributes: ['email', 'role', 'gender'],
+                where: condition,
+                order: sort,
+                limit: itemsPerPage,
+                offset: offset,
+            });
+
+            const totalPages = Math.ceil(usersData.count / itemsPerPage);
+
+            res.status(200).json({
+                users: usersData.rows,
+                count: limit,
+                currentPage: pageNumber,
+                totalPages: totalPages,
+            });
         } catch (err) {
             res.status(500).json(err);
         }
@@ -47,32 +73,72 @@ module.exports = {
     },
     loginUser: async (req, res) => {
         try {
-            const { email, password } = req.body;
-
-            if (!email || !password) {
-                return res.status(400).json({ error: 'Missing required fields' });
-            }
-
-            const isUser = await users.findOne({
+            const {email, password} = req.body;
+            const user = await users.findOne({
                 where: {
-                    email: email
+                    email : email,
+                    password : password
                 }
             });
-
-            if (!isUser) {
-                return res.status(400).json({ error: 'Email or Password not found or not match' });
-            } else {
-                const validPassword = await bcrypt.compare(password, isUser.password);
-                if (!validPassword) {
-                    return res.status(400).json({ error: 'Email or Password not found or not match' });
-                } else {
-                    const token = jwt.sign({ id: isUser.id, email: isUser.email, role: isUser.role }, "secretkey");
-                    res.status(200).json({
-                        message: 'Login success',
-                        token: token,
-                    });
-                }
+            if (!user) {
+                return res.status(400).json({error: 'User not found'});
             }
+            const validPassword = await bcrypt.compare(password, user.password)
+            if (!validPassword) {
+                return res.status(400).json({error: 'Invalid password'});
+            }
+            const payload = {
+                id: user.id,
+                email: user.email,
+                role: user.role,
+                gender: user.gender
+            }
+            const token = jwt.sign(payload, process.env.SECRET_KEY, {expiresIn: '1h'})
+            res.status(200).json({
+                message: 'Login success',
+                token: token
+            });
+        }catch (err) {
+            res.status(500).json(err);
+        }
+    },
+    updateUser: async (req, res) => {
+        try {
+            const {email, password, role, gender} = req.body;
+
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            const updateUser = await users.update({
+                password: hashedPassword,
+                email,
+                role,
+                gender,
+            }, {
+                where: {
+                    id: req.params.id
+                }
+            });
+            res.status(200).json({
+                message: 'Update success',
+                data: updateUser
+            });
+
+        } catch (err) {
+            res.status(500).json(err);
+        }
+    },
+    deleteUser: async (req, res) => {
+        try {
+            const deleteUser = await users.destroy({
+                where: {
+                    id: req.params.id
+                }
+            });
+            res.status(200).json({
+                message: 'Delete success',
+                data: deleteUser
+            });
+
         } catch (err) {
             res.status(500).json(err);
         }
