@@ -1,0 +1,36 @@
+image: docker:latest
+
+variables:
+  REPOSITORY_URL: syifaul/apitodo
+  IMAGE_TAG: latest
+
+services:
+  - docker:dind
+
+before_script:
+  - docker login --username=$DH_USERNAME --password=$DH_PASSWORD
+
+stages:
+  - build
+  - deploy
+build:
+  stage: build
+  script:
+    - echo "Building the image"
+    - docker build -t apitodo:latest .
+    - echo "Tagging the image"
+    - docker tag apitodo:latest $REPOSITORY_URL:$IMAGE_TAG
+    - echo "Pushing the image"
+    - docker push $REPOSITORY_URL:$IMAGE_TAG
+  only:
+    - master
+
+deploy:
+    stage: deploy
+    script:
+        - echo "Deploying the image"
+        - docker stop apitodo || true && docker rm apitodo || true
+        - docker container run -dt -p $PORT:$PORT --name apitodo $REPOSITORY_URL:latest
+        - docker image prune -f
+    only:
+        - master
